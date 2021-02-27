@@ -1698,11 +1698,15 @@ int adreno_gmu_fenced_write(struct adreno_device *adreno_dev,
 			udelay(GMU_WAKEUP_DELAY_US);
 		else
 			usleep_range(GMU_WAKEUP_DELAY_US,
+<<<<<<< HEAD
 				3 * GMU_WAKEUP_DELAY_US);
 <<<<<<< HEAD
 
 =======
 >>>>>>> e266d06b7519 (msm: kgsl: Don't busy wait for fenced GMU writes when possible)
+=======
+				12 * GMU_WAKEUP_DELAY_US);
+>>>>>>> b54ec833662c (msm: kgsl: increase fenced write wait timer on sdm845)
 
 		/* Try to write the fenced register again */
 		adreno_writereg(adreno_dev, offset, val);
