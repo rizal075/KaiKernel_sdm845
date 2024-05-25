@@ -130,12 +130,22 @@ config CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
 	  have a look at the help section of that governor. The fallback
 	  governor will be 'performance'.
 
+<<<<<<< HEAD
 config CPU_FREQ_DEFAULT_GOV_BLU_SCHEDUTIL
 	bool "blu_schedutil"
 	select CPU_FREQ_GOV_BLU_SCHEDUTIL
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the 'blu_schedutil' CPUFreq governor by default. If unsure,
+=======
+config CPU_FREQ_DEFAULT_GOV_WALT
+	bool "walt"
+	depends on SMP
+	select CPU_FREQ_GOV_WALT
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the 'game' CPUFreq governor by default. If unsure,
+>>>>>>> 13ec6d53461e (BACKPORT: CPU Governor WALT from linux 5.10)
 	  have a look at the help section of that governor. The fallback
 	  governor will be 'performance'.
 
@@ -265,9 +275,15 @@ config CPU_FREQ_GOV_SCHEDUTIL
 
 	  If in doubt, say N.
 
+<<<<<<< HEAD
 config CPU_FREQ_GOV_BLU_SCHEDUTIL
 	tristate "'blu_schedutil' cpufreq policy governor"
 	depends on CPU_FREQ
+=======
+config CPU_FREQ_GOV_WALT
+	bool "'walt' cpufreq policy governor"
+	depends on CPU_FREQ && SMP
+>>>>>>> 13ec6d53461e (BACKPORT: CPU Governor WALT from linux 5.10)
 	select CPU_FREQ_GOV_ATTR_SET
 	select IRQ_WORK
 	help
@@ -281,6 +297,7 @@ config CPU_FREQ_GOV_BLU_SCHEDUTIL
 	  both cases.
 
 	  To compile this driver as a module, choose M here: the module will
+<<<<<<< HEAD
 	  be called cpufreq_blu_schedutil.
 
 	  If in doubt, say N.
@@ -355,6 +372,12 @@ config MAX_BOOST_FREQ_PERF
 	  Max-boost frequency for the performance CPU cluster.
 endif
 
+=======
+	  be called cpufreq_walt.
+
+	  If in doubt, say N.
+
+>>>>>>> 13ec6d53461e (BACKPORT: CPU Governor WALT from linux 5.10)
 comment "CPU frequency scaling drivers"
 
 config CPUFREQ_DT
