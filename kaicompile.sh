@@ -3,24 +3,22 @@
 # Many parts of this script were taken from @REIGNZ, @idkwhoiam322 and @raphielscape . Huge thanks to them.
 
 # Some general variables
-PHONE="dipper"
+PHONE="beryllium"
 ARCH="arm64"
 SUBARCH="arm64"
-DEFCONFIG=nogravity-dipper_defconfig
-#DEFCONFIG=beryllium_defconfig
+DEFCONFIG=kaikernel_defconfig
 COMPILER=clang
 LINKER=""
-COMPILERDIR="/media/pierre/Expension/Android/PocophoneF1/Kernels/Proton-Clang"
+COMPILERDIR="/workspace/KaiKernel_sdm_845/proton-clang"
 
 # Outputs
-mkdir out/outputs
-mkdir out/outputs/${PHONE}
-mkdir out/outputs/${PHONE}/SE
-mkdir out/outputs/${PHONE}/NSE
+mkdir out/KaiKernel
+mkdir out/KaiKernel/NEW-SE
+mkdir out/KaiKernel/NEW-NSE
 
 # Export shits
-export KBUILD_BUILD_USER=Pierre2324
-export KBUILD_BUILD_HOST=G7-7588
+export KBUILD_BUILD_USER=Kaiyaa77
+export KBUILD_BUILD_HOST=Yuu507
 
 # Speed up build process
 MAKE="./makeparallel"
@@ -73,34 +71,38 @@ fi
 # Build starts here
 if [ -z ${LINKER} ]
 then
-    #Start with SE
-    cp arch/arm64/boot/dts/qcom/SE_NSE/SE/* arch/arm64/boot/dts/qcom/
-    Build
+        #NEW-SE
+        cp KaiKernel/TOUCH_FW/NEW/* firmware/
+        cp KaiKernel/SE/* arch/arm64/boot/dts/qcom/
+        cp KaiKernel/OC/gpucc-sdm845.c drivers/clk/qcom/
+        cp KaiKernel/OC/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
+        Build
 else
-    Build_lld
+        Build_lld
 fi
+        if [ $? -ne 0 ]
+        then
+            echo "Build failed"
+            rm -rf out/KaiKernel/NEW-SE/*
+        else
+            echo "Build succesful"
+            cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NEW-SE/Image.gz-dtb
 
-if [ $? -ne 0 ]
-then
-    echo "Build failed"
-    rm -rf out/outputs/${PHONE}/*
-else
-    echo "Build succesful"
-    cp out/arch/arm64/boot/Image.gz-dtb out/outputs/${PHONE}/SE/Image.gz-dtb
-    
-    #NSE
-    cp arch/arm64/boot/dts/qcom/SE_NSE/NSE/* arch/arm64/boot/dts/qcom/
-    Build
-    if [ $? -ne 0 ]
-    then
-        echo "Build failed"
-        rm -rf out/outputs/${PHONE}/NSE/*
-    else
-        echo "Build succesful"
-        cp out/arch/arm64/boot/Image.gz-dtb out/outputs/${PHONE}/NSE/Image.gz-dtb
-    fi
-fi
+            #NEW-NSE
+            cp KaiKernel/NSE/* arch/arm64/boot/dts/qcom/
+            Build
+            if [ $? -ne 0 ]
+            then
+                echo "Build failed"
+                rm -rf out/KaiKernel/NEW-NSE/*
+            else
+                echo "Build succesful"
+                cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NEW-NSE/Image.gz-dtb
+            fi
+        fi
 
 BUILD_END=$(date +"%s")
 DIFF=$(($BUILD_END - $BUILD_START))
 echo -e "$yellow Build completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds.$nocol"
+
+
