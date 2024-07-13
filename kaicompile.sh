@@ -13,8 +13,8 @@ COMPILERDIR="/workspace/KaiKernel_sdm_845/proton-clang"
 
 # Outputs
 mkdir out/KaiKernel
-mkdir out/KaiKernel/NEW-SE
-mkdir out/KaiKernel/NEW-NSE
+mkdir out/KaiKernel/SE
+mkdir out/KaiKernel/NSE
 
 # Export shits
 export KBUILD_BUILD_USER=Kaiyaa77
@@ -72,7 +72,7 @@ fi
 if [ -z ${LINKER} ]
 then
         #NEW-SE
-        cp KaiKernel/TOUCH_FW/NEW/* firmware/
+        cp KaiKernel/TOUCH_FW/OLD/* firmware/
         cp KaiKernel/SE/* arch/arm64/boot/dts/qcom/
         cp KaiKernel/OC/gpucc-sdm845.c drivers/clk/qcom/
         cp KaiKernel/OC/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
@@ -83,10 +83,10 @@ fi
         if [ $? -ne 0 ]
         then
             echo "Build failed"
-            rm -rf out/KaiKernel/NEW-SE/*
+            rm -rf out/KaiKernel/SE/*
         else
             echo "Build succesful"
-            cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NEW-SE/Image.gz-dtb
+            cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/SE/Image.gz-dtb
 
             #NEW-NSE
             cp KaiKernel/NSE/* arch/arm64/boot/dts/qcom/
@@ -94,10 +94,10 @@ fi
             if [ $? -ne 0 ]
             then
                 echo "Build failed"
-                rm -rf out/KaiKernel/NEW-NSE/*
+                rm -rf out/KaiKernel/NSE/*
             else
                 echo "Build succesful"
-                cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NEW-NSE/Image.gz-dtb
+                cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NSE/Image.gz-dtb
             fi
         fi
 
