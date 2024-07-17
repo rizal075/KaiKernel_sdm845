@@ -304,14 +304,14 @@
  * The minimum number of bits of entropy before we wake up a read on
  * /dev/random.  Should be enough to do a significant reseed.
  */
-static int random_read_wakeup_bits = 1024;
+static int random_read_wakeup_bits = 256;
 
 /*
  * If the entropy count falls under this number of bits, then we
  * should wake up processes which are selecting or polling on write
  * access to /dev/random.
  */
-static int random_write_wakeup_bits = 128 * OUTPUT_POOL_WORDS;
+static int random_write_wakeup_bits = 16 * OUTPUT_POOL_WORDS;
 
 /*
  * The minimum number of seconds between urandom pool reseeding.  We
@@ -652,103 +652,84 @@ static void process_random_ready_list(void)
  */
 static void credit_entropy_bits(struct entropy_store *r, int nbits)
 {
-	int entropy_count, orig;
-	const int pool_size = r->poolinfo->poolfracbits;
-	int nfrac = nbits << ENTROPY_SHIFT;
+    int entropy_count, orig;
+    const int pool_size = r->poolinfo->poolfracbits;
+    int nfrac = nbits << ENTROPY_SHIFT;
 
-	if (!nbits)
-		return;
+    if (!nbits)
+        return;
 
 retry:
-	entropy_count = orig = ACCESS_ONCE(r->entropy_count);
-	if (nfrac < 0) {
-		/* Debit */
-		entropy_count += nfrac;
-	} else {
-		/*
-		 * Credit: we have to account for the possibility of
-		 * overwriting already present entropy.	 Even in the
-		 * ideal case of pure Shannon entropy, new contributions
-		 * approach the full value asymptotically:
-		 *
-		 * entropy <- entropy + (pool_size - entropy) *
-		 *	(1 - exp(-add_entropy/pool_size))
-		 *
-		 * For add_entropy <= pool_size/2 then
-		 * (1 - exp(-add_entropy/pool_size)) >=
-		 *    (add_entropy/pool_size)*0.7869...
-		 * so we can approximate the exponential with
-		 * 3/4*add_entropy/pool_size and still be on the
-		 * safe side by adding at most pool_size/2 at a time.
-		 *
-		 * The use of pool_size-2 in the while statement is to
-		 * prevent rounding artifacts from making the loop
-		 * arbitrarily long; this limits the loop to log2(pool_size)*2
-		 * turns no matter how large nbits is.
-		 */
-		int pnfrac = nfrac;
-		const int s = r->poolinfo->poolbitshift + ENTROPY_SHIFT + 2;
-		/* The +2 corresponds to the /4 in the denominator */
+    entropy_count = orig = ACCESS_ONCE(r->entropy_count);
+    if (nfrac < 0) {
+        /* Debit */
+        entropy_count += nfrac;
+    } else {
+        int pnfrac = nfrac;
+        const int s = r->poolinfo->poolbitshift + ENTROPY_SHIFT + 2;
 
-		do {
-			unsigned int anfrac = min(pnfrac, pool_size/2);
-			unsigned int add =
-				((pool_size - entropy_count)*anfrac*3) >> s;
+        do {
+            unsigned int anfrac = min(pnfrac, pool_size/2);
+            unsigned int add =
+                ((pool_size - entropy_count)*anfrac*3) >> s;
 
-			entropy_count += add;
-			pnfrac -= anfrac;
-		} while (unlikely(entropy_count < pool_size-2 && pnfrac));
-	}
+            entropy_count += add;
+            pnfrac -= anfrac;
+        } while (unlikely(entropy_count < pool_size-2 && pnfrac));
+    }
 
-	if (unlikely(entropy_count < 0)) {
-		pr_warn("random: negative entropy/overflow: pool %s count %d\n",
-			r->name, entropy_count);
-		WARN_ON(1);
-		entropy_count = 0;
-	} else if (entropy_count > pool_size)
-		entropy_count = pool_size;
-	if (cmpxchg(&r->entropy_count, orig, entropy_count) != orig)
-		goto retry;
+    if (unlikely(entropy_count < 0)) {
+        pr_warn("random: negative entropy/overflow: pool %s count %d\n",
+            r->name, entropy_count);
+        WARN_ON(1);
+        entropy_count = 0;
+    } else if (entropy_count > pool_size)
+        entropy_count = pool_size;
 
-	r->entropy_total += nbits;
-	if (!r->initialized && r->entropy_total > 128) {
-		r->initialized = 1;
-		r->entropy_total = 0;
-	}
+    // Modifikasi: Pastikan entropy_count tidak melebihi 512 bit
+    if (entropy_count > 512 << ENTROPY_SHIFT)
+        entropy_count = 512 << ENTROPY_SHIFT;
 
-	trace_credit_entropy_bits(r->name, nbits,
-				  entropy_count >> ENTROPY_SHIFT,
-				  r->entropy_total, _RET_IP_);
+    if (cmpxchg(&r->entropy_count, orig, entropy_count) != orig)
+        goto retry;
 
-	if (r == &input_pool) {
-		int entropy_bits = entropy_count >> ENTROPY_SHIFT;
+    r->entropy_total += nbits;
+    if (!r->initialized && r->entropy_total > 128) {
+        r->initialized = 1;
+        r->entropy_total = 0;
+    }
 
-		if (crng_init < 2 && entropy_bits >= 128) {
-			crng_reseed(&primary_crng, r);
-			entropy_bits = r->entropy_count >> ENTROPY_SHIFT;
-		}
+    trace_credit_entropy_bits(r->name, nbits,
+                  entropy_count >> ENTROPY_SHIFT,
+                  r->entropy_total, _RET_IP_);
 
-		/* should we wake readers? */
-		if (entropy_bits >= random_read_wakeup_bits) {
-			wake_up_interruptible(&random_read_wait);
-			kill_fasync(&fasync, SIGIO, POLL_IN);
-		}
-		/* If the input pool is getting full, send some
-		 * entropy to the blocking pool until it is 75% full.
-		 */
-		if (entropy_bits > random_write_wakeup_bits &&
-		    r->initialized &&
-		    r->entropy_total >= 2*random_read_wakeup_bits) {
-			struct entropy_store *other = &blocking_pool;
+    if (r == &input_pool) {
+        int entropy_bits = entropy_count >> ENTROPY_SHIFT;
 
-			if (other->entropy_count <=
-			    3 * other->poolinfo->poolfracbits / 4) {
-				schedule_work(&other->push_work);
-				r->entropy_total = 0;
-			}
-		}
-	}
+        if (crng_init < 2 && entropy_bits >= 128) {
+            crng_reseed(&primary_crng, r);
+            entropy_bits = r->entropy_count >> ENTROPY_SHIFT;
+        }
+
+        if (entropy_bits >= random_read_wakeup_bits) {
+            wake_up_interruptible(&random_read_wait);
+            kill_fasync(&fasync, SIGIO, POLL_IN);
+        }
+
+        if (entropy_bits > random_write_wakeup_bits &&
+            r->initialized &&
+            r->entropy_total >= 2*random_read_wakeup_bits) {
+            struct entropy_store *other = &blocking_pool;
+
+            if (other->entropy_count <=
+                3 * other->poolinfo->poolfracbits / 4) {
+                schedule_work(&other->push_work);
+                r->entropy_total = 0;
+            }
+        }
+    }
 }
+
 
 static int credit_entropy_bits_safe(struct entropy_store *r, int nbits)
 {
@@ -2039,7 +2020,7 @@ static int proc_do_entropy(struct ctl_table *table, int write,
 	return proc_dointvec(&fake_table, write, buffer, lenp, ppos);
 }
 
-static int sysctl_poolsize = INPUT_POOL_WORDS * 32;
+static int sysctl_poolsize = INPUT_POOL_WORDS * 4;
 extern struct ctl_table random_table[];
 struct ctl_table random_table[] = {
 	{
