@@ -9,7 +9,7 @@ SUBARCH="arm64"
 DEFCONFIG=kaikernel_defconfig
 COMPILER=clang
 LINKER=""
-COMPILERDIR="/workspace/KaiKernel_sdm_845/proton-clang"
+COMPILERDIR="/workspaces/proton-clang"
 
 # Outputs
 mkdir out/KaiKernel
@@ -76,9 +76,9 @@ then
         cp KaiKernel/SE/* arch/arm64/boot/dts/qcom/
         cp KaiKernel/OC/gpucc-sdm845.c drivers/clk/qcom/
         cp KaiKernel/OC/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
-        Build
+        Build 2>&1 | tee -a compile.log
 else
-        Build_lld
+        Build_lld 2>&1 | tee -a compile.log
 fi
         if [ $? -ne 0 ]
         then
