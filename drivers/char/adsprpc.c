@@ -730,7 +730,7 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
 	}
 	hlist_for_each_entry_safe(map, n, &fl->maps, hn) {
 		/* Remove if only one reference map and no context map */
-		if (map->refs == 1 && !map->ctx_refs && map->raddr == va &&
+		if (map->refs == 1 && !map->ctx_refs &&  map->raddr == va &&
 			map->raddr + map->len == va + len &&
 			/* Remove map if not used in process initialization */
 			!map->is_filemap) {
@@ -1829,9 +1829,9 @@ static int put_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 				break;
 			if (!fastrpc_mmap_find(ctx->fl, (int)fdlist[i], 0, 0,
 						0, 0, &mmap)) {
-					if (mmap && mmap->ctx_refs)
-						mmap->ctx_refs--;
-					fastrpc_mmap_free(mmap, 0);
+				if (mmap && mmap->ctx_refs)
+					mmap->ctx_refs--;
+				fastrpc_mmap_free(mmap, 0);
 			}
 		}
 	}
