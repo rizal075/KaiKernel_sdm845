@@ -9,8 +9,10 @@ rm -rf compile.log
 #
 mkdir -p out
 mkdir out/KaiKernel
-mkdir out/KaiKernel/SE_OC
-mkdir out/KaiKernel/NSE_OC
+mkdir out/KaiKernel/SE_OC818
+mkdir out/KaiKernel/NSE_OC818
+mkdir out/KaiKernel/SE_OC840
+mkdir out/KaiKernel/NSE_OC840
 
 
 #
@@ -46,19 +48,19 @@ STRIP=llvm-strip \
 CROSS_COMPILE=aarch64-linux-gnu- \
 CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 }
-        #SE Overclock
+        #SE Overclock 818
         cp KaiKernel/SE/* arch/arm64/boot/dts/qcom/
         cp KaiKernel/OC/818/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
         cp KaiKernel/OC/818/gpucc-sdm845.c drivers/clk/qcom/
-        rve
+        rve 2>&1 | tee -a compile.log
         if [ $? -ne 0 ]
         then
             echo "Build failed"
         else
             echo "Build succesful"
-            cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/SE_OC/Image.gz-dtb
+            cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/SE_OC818/Image.gz-dtb
             
-            #NSE Overclock
+            #NSE Overclock 818
             cp KaiKernel/NSE/* arch/arm64/boot/dts/qcom/
             cp KaiKernel/OC/818/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
             cp KaiKernel/OC/818/gpucc-sdm845.c drivers/clk/qcom/
@@ -68,10 +70,36 @@ CROSS_COMPILE_ARM32=arm-linux-gnueabi-
                 echo "Build failed"
             else
                 echo "Build succesful"
-                cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NSE_OC/Image.gz-dtb
+                cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NSE_OC818/Image.gz-dtb
+
+                 #SE Overclock 840
+                 cp KaiKernel/SE/* arch/arm64/boot/dts/qcom/
+                 cp KaiKernel/OC/840/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
+                 cp KaiKernel/OC/840/gpucc-sdm845.c drivers/clk/qcom/
+                 rve
+                 if [ $? -ne 0 ]
+                 then
+                     echo "Build failed"
+                 else
+                 echo "Build succesful"
+                 cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/SE_OC840/Image.gz-dtb
+            
+                    #NSE Overclock 840
+                    cp KaiKernel/NSE/* arch/arm64/boot/dts/qcom/
+                    cp KaiKernel/OC/840/sdm845-v2.dtsi arch/arm64/boot/dts/qcom/
+                    cp KaiKernel/OC/840/gpucc-sdm845.c drivers/clk/qcom/
+                    rve
+                    if [ $? -ne 0 ]
+                    then
+                        echo "Build failed"
+                    else
+                    echo "Build succesful"
+                    cp out/arch/arm64/boot/Image.gz-dtb out/KaiKernel/NSE_OC840/Image.gz-dtb
+
+            fi
+        fi
     fi
 fi
-
 END=$(date +"%s")
 DIFF=$(($END - $START))
 echo -e "$yellow Build completed in $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) seconds.$nocol"
