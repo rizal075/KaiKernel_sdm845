@@ -53,8 +53,9 @@ CONFIG_CROSS_MEMORY_ATTACH=y
 CONFIG_AUDIT=y
 # CONFIG_AUDITSYSCALL is not set
 
-# Adreno Idler
+# Adreno Idler and Bore
 CONFIG_ADRENO_IDLER=y
+CONFIG_SCHED_BORE=y
 
 #
 # IRQ subsystem
