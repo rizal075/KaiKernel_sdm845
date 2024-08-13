@@ -56,6 +56,8 @@ CONFIG_AUDIT=y
 # Schedular Bore
 CONFIG_SCHED_BORE=y
 
+CONFIG_INITRAMFS_IGNORE_SKIP_FLAG=y
+
 #
 # IRQ subsystem
 #
