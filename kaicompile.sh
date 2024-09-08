@@ -1,7 +1,7 @@
 #!/bin/sh
 
 DEFCONFIG="kaikernel_defconfig"
-CLANGDIR="/workspace/KaiKernel_sdm_845/clang-19"
+CLANGDIR="/workspaces/KaiKernel_sdm_845/neutron-clang"
 
 #
 rm -rf compile.log
@@ -45,6 +45,8 @@ NM=llvm-nm \
 OBJCOPY=llvm-objcopy \
 OBJDUMP=llvm-objdump \
 STRIP=llvm-strip \
+LLVM=1 \
+LLVM_IAS=1 \
 CROSS_COMPILE=aarch64-linux-gnu- \
 CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 }
