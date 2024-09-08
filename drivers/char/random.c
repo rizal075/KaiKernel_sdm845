@@ -318,7 +318,7 @@ static int random_write_wakeup_bits = 8 * OUTPUT_POOL_WORDS;
  * do this to limit the amount of entropy that can be drained from the
  * input pool even if there are heavy demands on /dev/urandom.
  */
-static int random_min_urandom_seed = 90;
+static int random_min_urandom_seed = 64;
 
 /*
  * Originally, we used a primitive polynomial of degree .poolwords
@@ -686,9 +686,9 @@ retry:
     } else if (entropy_count > pool_size)
         entropy_count = pool_size;
 
-    // Modifikasi: Pastikan entropy_count tidak melebihi 512 bit
-    if (entropy_count > 512 << ENTROPY_SHIFT)
-        entropy_count = 512 << ENTROPY_SHIFT;
+    // Modifikasi: Pastikan entropy_count tidak melebihi 640 bit
+    if (entropy_count > 640 << ENTROPY_SHIFT)
+        entropy_count = 640 << ENTROPY_SHIFT;
 
     if (cmpxchg(&r->entropy_count, orig, entropy_count) != orig)
         goto retry;
@@ -2020,7 +2020,7 @@ static int proc_do_entropy(struct ctl_table *table, int write,
 	return proc_dointvec(&fake_table, write, buffer, lenp, ppos);
 }
 
-static int sysctl_poolsize = INPUT_POOL_WORDS * 4;
+static int sysctl_poolsize = INPUT_POOL_WORDS * 5;
 extern struct ctl_table random_table[];
 struct ctl_table random_table[] = {
 	{
