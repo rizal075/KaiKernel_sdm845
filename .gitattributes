@@ -1,5 +1,2 @@
 *.c   diff=cpp
 *.h   diff=cpp
-*.largefileextension filter=lfs diff=lfs merge=lfs -text
-*.kernelAquamarineHoshino filter=lfs diff=lfs merge=lfs -text
-kernelAquamarineHoshino filter=lfs diff=lfs merge=lfs -text
