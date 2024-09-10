@@ -37,7 +37,7 @@ endif
 
 PLATFORM ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 
-CFLAGS ?= -O3
+CFLAGS ?= -O2
 CFLAGS += -std=gnu99 -D_GNU_SOURCE
 CFLAGS += -Wall -Wextra
 CFLAGS += -MMD -MP

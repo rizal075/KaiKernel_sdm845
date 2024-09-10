@@ -59,7 +59,7 @@ $(eval $(call tar_download,IPTABLES,iptables,1.6.1,.tar.bz2,https://www.netfilte
 $(eval $(call tar_download,NMAP,nmap,7.60,.tar.bz2,https://nmap.org/dist/))
 $(eval $(call tar_download,IPUTILS,iputils,s20161105,.tar.gz,https://github.com/iputils/iputils/archive/s20161105.tar.gz/#))
 
-export CFLAGS ?= -O3 -pipe
+export CFLAGS ?= -O2 -pipe
 export LDFLAGS ?=
 export CPPFLAGS := -I$(BUILD_PATH)/include
 
