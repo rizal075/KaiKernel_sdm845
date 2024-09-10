@@ -35,9 +35,9 @@ red='\033[0;31m'
 nocol='\033[0m'
 
 rve () {
-make -j$(nproc --all) O=out LLVM=1 \
+make -j$(nproc --all) O=out LLVM=1 LLVM_IAS=1 \
 ARCH=arm64 \
-CC=clang \
+CC="ccache clang" \
 LD=ld.lld \
 AR=llvm-ar \
 AS=llvm-as \
@@ -45,8 +45,6 @@ NM=llvm-nm \
 OBJCOPY=llvm-objcopy \
 OBJDUMP=llvm-objdump \
 STRIP=llvm-strip \
-LLVM=1 \
-LLVM_IAS=1 \
 CROSS_COMPILE=aarch64-linux-gnu- \
 CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 }
