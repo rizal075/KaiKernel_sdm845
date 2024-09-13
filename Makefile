@@ -563,7 +563,7 @@ CLANG_FLAGS	+= $(call cc-option, -Wno-unsequenced)
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 export CLANG_FLAGS
-
+endif
 
 ifeq ($(mixed-targets),1)
 # ===========================================================================
