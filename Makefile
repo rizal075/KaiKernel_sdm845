@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
 VERSION = 4
 PATCHLEVEL = 9
 SUBLEVEL = 337
@@ -309,9 +308,8 @@ else
 HOSTCC       = gcc
 HOSTCXX      = g++
 endif
-
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer -std=gnu89
-HOSTCXXFLAGS = -O2
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe -fforce-addr 
+HOSTCXXFLAGS = -Ofast
 
 ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
 HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
@@ -372,7 +370,6 @@ OBJCOPY		= $(CROSS_COMPILE)objcopy
 OBJDUMP		= $(CROSS_COMPILE)objdump
 endif
 AWK		= awk
-DTC		= scripts/dtc/dtc
 GENKSYMS	= scripts/genksyms/genksyms
 INSTALLKERNEL  := installkernel
 DEPMOD		= depmod
@@ -382,7 +379,6 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-DTC_FLAGS      :=
 NOSTDINC_FLAGS  =
 CFLAGS_MODULE   =
 AFLAGS_MODULE   =
@@ -411,17 +407,29 @@ LINUXINCLUDE    := \
 LINUXINCLUDE	+= $(filter-out $(LINUXINCLUDE),$(USERINCLUDE))
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -pipe \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -std=gnu89
+		   -Wno-unused-function\
+		   -ffast-math -mcpu=cortex-a55 -mtune=cortex-a55 \
+		   -std=gnu89 \
+		   -mllvm -polly \
+		   -mllvm -polly-run-dce \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-invariant-load-hoisting \
+		   -mllvm -polly-loopfusion-greedy=1 \
+		   -mllvm -polly-postopts=1 \
+		   -mllvm -polly-reschedule=1 \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-vectorizer=stripmine
 		   
-# Optimize Clang build tes
-KBUILD_CFLAGS	+= -mcpu=cortex-a75 -mtune=cortex-a75
-KBUILD_AFLAGS   += -mcpu=cortex-a75 -mtune=cortex-a75
-KBUILD_LDFLAGS  += -mllvm -mcpu=cortex-a75 -mtune=cortex-a75
-
+ifdef CONFIG_INLINE_OPTIMIZATION
+KBUILD_CFLAGS	+= -mllvm -inline-threshold=2000
+KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=3000
+KBUILD_CFLAGS   += -mllvm -unroll-threshold=1200
+endif
+		   
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -436,15 +444,11 @@ CLANG_FLAGS :=
 KERNELRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
 KERNELVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
 
-PATCHLEVEL_INJECT = 9
-KERNELVERSION_INJECT = $(VERSION)$(if $(PATCHLEVEL_INJECT),.$(PATCHLEVEL_INJECT)$(if $(SUBLEVEL),.$(shell expr $(SUBLEVEL) + 34 )))$(EXTRAVERSION)
-KERNELRELEASE_INJECT = $(shell cat include/config/kernel.release | sed 's/^.*D8G/D8G/g')
-
 export VERSION PATCHLEVEL SUBLEVEL KERNELRELEASE KERNELVERSION
 export ARCH SRCARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC
 export CPP AR NM STRIP OBJCOPY OBJDUMP
 export MAKE AWK GENKSYMS INSTALLKERNEL PERL PYTHON UTS_MACHINE
-export HOSTCXX HOSTCXXFLAGS LDFLAGS_MODULE CHECK CHECKFLAGS DTC DTC_FLAGS
+export HOSTCXX HOSTCXXFLAGS LDFLAGS_MODULE CHECK CHECKFLAGS
 
 export KBUILD_CPPFLAGS NOSTDINC_FLAGS LINUXINCLUDE OBJCOPYFLAGS LDFLAGS
 export KBUILD_CFLAGS CFLAGS_KERNEL CFLAGS_MODULE
@@ -559,11 +563,14 @@ endif
 CLANG_FLAGS	+= -Werror=unknown-warning-option
 CLANG_FLAGS	+= $(call cc-option, -Wno-misleading-indentation)
 CLANG_FLAGS	+= $(call cc-option, -Wno-bool-operation)
-CLANG_FLAGS	+= $(call cc-option, -Wno-unsequenced)
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
-export CLANG_FLAGS
+ifeq ($(ld-name),lld)
+KBUILD_CFLAGS	+= -fuse-ld=lld
 endif
+KBUILD_CPPFLAGS += -Qunused-arguments
+endif
+
 
 ifeq ($(mixed-targets),1)
 # ===========================================================================
@@ -690,19 +697,15 @@ ifneq ($(ld-name),lld)
 LDFINAL_vmlinux := $(LD)
 LD		:= $(LDGOLD)
 LDFLAGS		+= -plugin LLVMgold.so
+LDFLAGS		+= -plugin-opt=mcpu=kryo
 endif
 # use llvm-ar for building symbol tables from IR files, and llvm-dis instead
 # of objdump for processing symbol versions and exports
 LLVM_AR		:= llvm-ar
-LLVM_NM	:= llvm-nm
-export LLVM_AR LLVM_NM
-endif
-
-ifeq ($(cc-name),clang)
-ifeq ($(ld-name),lld)
-KBUILD_CFLAGS	+= -fuse-ld=lld
-endif
-KBUILD_CPPFLAGS	+= -Qunused-arguments
+LLVM_DIS	:= llvm-dis
+export LLVM_AR LLVM_DIS
+# Set O3 optimization level for LTO
+LDFLAGS		+= --plugin-opt=O2
 endif
 
 # The arch Makefile can set ARCH_{CPP,A,C}FLAGS to override the default
@@ -712,23 +715,23 @@ ARCH_AFLAGS :=
 ARCH_CFLAGS :=
 include arch/$(SRCARCH)/Makefile
 
+KBUILD_CFLAGS	+= $(call cc-option,-fPIC,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
-KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
+
+ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
+KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
+KBUILD_CFLAGS	+= $(call cc-option,-fdata-sections,)
+endif
 
 ifdef CONFIG_LTO_CLANG
 KBUILD_LDFLAGS += -O2 --lto-O2 --strip-debug
 else
 KBUILD_LDFLAGS += -O2 --strip-debug
-endif
-
-ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
-KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
-KBUILD_CFLAGS	+= $(call cc-option,-fdata-sections,)
 endif
 
 ifdef CONFIG_LTO_CLANG
@@ -793,39 +796,33 @@ endif
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS   += -Os
-ifdef CONFIG_LLVM_POLLY
-POLLY_FLAGS	   += -mllvm -polly \
-		              -mllvm -polly-ast-use-context \
-		              -mllvm -polly-invariant-load-hoisting \
-		              -mllvm -polly-loopfusion-greedy=1 \
-		              -mllvm -polly-postopts=1 \
-		              -mllvm -polly-reschedule=1 \
-		              -mllvm -polly-run-inliner \
-		              -mllvm -polly-vectorizer=stripmine
-# Polly may optimise loops with dead paths beyound what the linker
-# can understand. This may negate the effect of the linker's DCE
-# so we tell Polly to perfom proven DCE on the loops it optimises
-# in order to preserve the overall effect of the linker's DCE.
-ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
-POLLY_FLAGS      += -mllvm -polly-run-dce
-endif
-OPT_FLAGS        += $(POLLY_FLAGS)
-KBUILD_LDFLAGS  += $(POLLY_FLAGS)
-endif
-ifdef CONFIG_INLINE_OPTIMIZATION
-KBUILD_CFLAGS	+= -mllvm -inline-threshold=2000
-KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=3000
-KBUILD_CFLAGS   += -mllvm -unroll-threshold=1200
-endif
 else
 KBUILD_CFLAGS   += -O2
 endif
 
-ifeq ($(cc-name),gcc)
-KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
-endif
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mcpu=cortex-a55 -mtune=cortex-a55
+KBUILD_CFLAGS	+= -O2 -mtune=cortex-a55 -mcpu=cortex-a55+crc+crypto+fp16+simd+sve \
+-fomit-frame-pointer -pipe \
+-funroll-loops \
+-ftree-vectorize \
+-fforce-addr \
+##-ftree-loop-vectorize \
+##-Wno-attribute-alias 
+
+#-floop-nest-optimize -fprefetch-loop-arrays 
+#KBUILD_CFLAGS	+= -fno-gcse  
+#KBUILD_CFLAGS	+= -floop-strip-mine -floop-block
+#KBUILD_CFLAGS	+= -floop-optimize -ftree-vectorize -ftracer
+LDFLAGS		+= -O2
+KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
+KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
+
+# This doesn't need 835769/843419 erratum fixes.
+# Some toolchains enable those fixes automatically, so opt-out.
+KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
+KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
+
+ifdef CONFIG_CC_WERROR
+KBUILD_CFLAGS	+= -Werror
 endif
 
 ifdef CONFIG_CC_WERROR
@@ -885,14 +882,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, format-invalid-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, gnu)
 KBUILD_CFLAGS += $(call cc-disable-warning, duplicate-decl-specifier)
 KBUILD_CFLAGS += $(call cc-disable-warning, pointer-bool-conversion)
-KBUILD_CFLAGS += -Wnull-dereference
-KBUILD_CFLAGS += $(call cc-option, -Wno-undefined-optimized)
-KBUILD_CFLAGS += $(call cc-option, -Wno-tautological-constant-out-of-range-compare)
-KBUILD_CFLAGS += $(call cc-option, -mllvm -disable-struct-const-merge)
-KBUILD_CFLAGS += $(call cc-option, -Wno-sometimes-uninitialized)
-
 # Quiet clang warning: comparison of unsigned expression < 0 is always false
-
 KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
 # CLANG uses a _MergedGlobals as optimization, but this breaks modpost, as the
 # source of a reference will be _MergedGlobals and not on of the whitelisted names.
@@ -901,7 +891,6 @@ KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
 KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
 endif
 
-KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
 # These warnings generated too much noise in a regular build.
 # Use make W=1 to enable them (see scripts/Makefile.extrawarn)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
@@ -1010,11 +999,13 @@ KBUILD_CFLAGS	+= $(call cc-option,-fno-merge-all-constants)
 
 # for gcc -fno-merge-all-constants disables everything, but it is fine
 # to have actual conforming behavior enabled.
-# KBUILD_CFLAGS	+= $(call cc-option,-fmerge-constants) not for CLANG
+KBUILD_CFLAGS	+= $(call cc-option,-fmerge-constants)
 
 # Make sure -fstack-check isn't enabled (like gentoo apparently did)
 KBUILD_CFLAGS  += $(call cc-option,-fno-stack-check,)
 
+# conserve stack if available
+KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
 
 # disallow errors like 'EXPORT_GPL(foo);' with missing header
 KBUILD_CFLAGS   += $(call cc-option,-Werror=implicit-int)
@@ -1350,12 +1341,17 @@ endif
 # needs to be updated, so this check is forced on all builds
 
 uts_len := 64
+ifneq (,$(BUILD_NUMBER))
+	UTS_RELEASE=$(KERNELRELEASE)-ab$(BUILD_NUMBER)
+else
+	UTS_RELEASE=$(KERNELRELEASE)
+endif
 define filechk_utsrelease.h
-	if [ `echo -n "$(KERNELRELEASE)" | wc -c ` -gt $(uts_len) ]; then \
-	  echo '"$(KERNELRELEASE)" exceeds $(uts_len) characters' >&2;    \
-	  exit 1;                                                         \
-	fi;                                                               \
-	(echo \#define UTS_RELEASE \"$(KERNELRELEASE)\" \\n\#define UTS_RELEASE_FIX \"$(KERNELRELEASE)\" \\n\#define UTS_RELEASE_INJECT \"$(KERNELVERSION_INJECT)-$(KERNELRELEASE_INJECT)\";)
+	if [ `echo -n "$(UTS_RELEASE)" | wc -c ` -gt $(uts_len) ]; then \
+	  echo '"$(UTS_RELEASE)" exceeds $(uts_len) characters' >&2;    \
+	  exit 1;                                                       \
+	fi;                                                             \
+	(echo \#define UTS_RELEASE \"$(UTS_RELEASE)\";)
 endef
 
 define filechk_version.h
@@ -1393,7 +1389,7 @@ firmware_install:
 export INSTALL_HDR_PATH = $(objtree)/usr
 
 # If we do an all arch process set dst to asm-$(hdr-arch)
-hdr-dst = $(if $(KBUILD_HEADERS), dst=include/asm-$(hdr-arch), dst=include/asm)
+hdr-dst = $(if $(KBUILD_HEADERS), dst=include/arch-$(hdr-arch), dst=include)
 
 PHONY += archheaders
 archheaders:
@@ -1414,7 +1410,7 @@ headers_install: __headers
 	$(if $(wildcard $(srctree)/arch/$(hdr-arch)/include/uapi/asm/Kbuild),, \
 	  $(error Headers not exportable for the $(SRCARCH) architecture))
 	$(Q)$(MAKE) $(hdr-inst)=include/uapi
-	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/uapi/asm $(hdr-dst)
+	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/uapi $(hdr-dst)
 	$(Q)$(MAKE) $(hdr-inst)=techpack/audio/include/uapi
 
 PHONY += headers_check_all
@@ -1424,7 +1420,7 @@ headers_check_all: headers_install_all
 PHONY += headers_check
 headers_check: headers_install
 	$(Q)$(MAKE) $(hdr-inst)=include/uapi HDRCHECK=1
-	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/uapi/asm $(hdr-dst) HDRCHECK=1
+	$(Q)$(MAKE) $(hdr-inst)=arch/$(hdr-arch)/include/uapi $(hdr-dst) HDRCHECK=1
 	$(Q)$(MAKE) $(hdr-inst)=techpack/audio/include/uapi HDRCHECK=1
 
 # ---------------------------------------------------------------------------
