@@ -412,7 +412,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -pipe \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -Wno-unused-function\
-		   -ffast-math -mcpu=cortex-a55 -mtune=cortex-a55 \
+		   -ffast-math \
 		   -std=gnu89 \
 		   -mllvm -polly \
 		   -mllvm -polly-run-dce \
@@ -428,6 +428,18 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -pipe \
 KBUILD_CFLAGS	+= -mllvm -inline-threshold=2000
 KBUILD_CFLAGS	+= -mllvm -inlinehint-threshold=3000
 KBUILD_CFLAGS   += -mllvm -unroll-threshold=1200
+
+ifeq ($(cc-name),gcc)
+KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
+endif
+ifeq ($(cc-name),clang)
+KBUILD_CFLAGS	+= -mcpu=cortex-a55 -mtune=cortex-a55
+
+# Optimize Clang build tes
+KBUILD_CFLAGS	+= -mcpu=cortex-a75 -mtune=cortex-a75
+KBUILD_AFLAGS   += -mcpu=cortex-a75 -mtune=cortex-a75
+KBUILD_LDFLAGS  += -mllvm -mcpu=cortex-a75 -mtune=cortex-a75
+
 		   
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
