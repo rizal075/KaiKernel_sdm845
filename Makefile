@@ -434,12 +434,7 @@ KBUILD_CFLAGS	+= -mcpu=cortex-a75.cortex-a55 -mtune=cortex-a75.cortex-a55
 endif
 ifeq ($(cc-name),clang)
 KBUILD_CFLAGS	+= -mcpu=cortex-a55 -mtune=cortex-a55
-
-# Optimize Clang build tes
-KBUILD_CFLAGS	+= -mcpu=cortex-a75 -mtune=cortex-a75
-KBUILD_AFLAGS   += -mcpu=cortex-a75 -mtune=cortex-a75
-KBUILD_LDFLAGS  += -mllvm -mcpu=cortex-a75 -mtune=cortex-a75
-
+endif
 		   
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
