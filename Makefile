@@ -415,6 +415,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -pipe \
 		   -ffast-math -mcpu=cortex-a55 -mtune=cortex-a55 \
 		   -std=gnu89 \
 		   -mllvm -polly \
+		   -mllvm -polly-run-dce \
 		   -mllvm -polly-ast-use-context \
 		   -mllvm -polly-invariant-load-hoisting \
 		   -mllvm -polly-loopfusion-greedy=1 \
